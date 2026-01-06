@@ -128,7 +128,7 @@ const MyGeneration = () => {
                   >
                     {thumb.image_url ? (
                       <img
-                        src={thumb.image_url}
+                        src={thumb.image_url?.replace(/^http:\/\//i, 'https://')}
                         alt={thumb.title}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
