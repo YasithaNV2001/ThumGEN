@@ -41,9 +41,10 @@ app.use(session({
         sameSite: isProduction ? 'none' : 'lax',   
         path: '/'
     }, 
-    store: MongoStore.create({
-        mongoUrl: process.env.MONGODB_URI as string,
-        collectionName: 'sessions',
+    // REPLACE IT WITH THIS (add "as any"):
+    store: (MongoStore as any).create({
+    mongoUrl: process.env.MONGODB_URI as string,
+    collectionName: 'sessions',
     })
 }));
 
