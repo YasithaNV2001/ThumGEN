@@ -38,10 +38,11 @@ app.use(session({
     resave: false,
     saveUninitialized: false,
     cookie: { 
-        maxAge:1000 * 60 * 60 * 24 *7 ,
-        httpOnly :true,
-        secure:process.env.NODE_ENV == 'production',
-        sameSite:process.env.NODE_ENV == 'production' ? 'none' : 'lax',
+        maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+        // FORCE these settings for Vercel to work
+        httpOnly: true, 
+        secure: true,       // Must be true for Vercel (HTTPS)
+        sameSite: 'none',   // Must be 'none' for cross-site (Frontend vs Backend)
         path: '/'
 
 
