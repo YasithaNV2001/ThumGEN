@@ -1,3 +1,4 @@
+import os from 'os';
 import { Request, Response } from 'express';
 import Thumbnail from '../models/Thumbnail.js';
 import { GenerateContentConfig, HarmBlockThreshold, HarmCategory } from '@google/genai';
@@ -118,23 +119,27 @@ export const generateThumbnail = async (req: Request, res: Response) => {
                        
                     }
                 }
-                const filename = `final-output-${Date.now()}.png`;
-                const filepath = path.join(`images`,filename);
+               // ... inside generateThumbnail ...
 
+  const filename = `final-output-${Date.now()}.png`;
 
-                //create the images directory if it doesn't exist
+// OLD (Crashes on Vercel):
+// const filepath = path.join(`images`, filename);
+// fs.mkdirSync(`images`, { recursive: true });
 
-                fs.mkdirSync(`images`,{recursive:true});
+// NEW (Works on Vercel):
+// Use the system's temporary directory
+const filepath = path.join(os.tmpdir(), filename);
 
-                //write the final image to the file
+// write the final image to the file
+fs.writeFileSync(filepath, finalBuffer!);
 
-                fs.writeFileSync (filepath, finalBuffer!);
+// Upload to Cloudinary
+const uploadResult = await cloudinary.uploader.upload(filepath, {
+    resource_type: 'image',
+});
 
-               
-                const uploadResult =await cloudinary.uploader.upload(filepath,{
-                    resource_type:'image',
-                    
-                });
+// ... rest of your code ...
 
                 thumbnail.image_url = uploadResult.secure_url;
                 thumbnail.isGenerating = false;
