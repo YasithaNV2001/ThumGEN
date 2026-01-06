@@ -53,7 +53,7 @@ const MyGeneration = () => {
         "Are you sure to you want delete this thumbnail?"
       );
       if (!confirm) return;
-      const { data } = await api.delete(`/api/thumbnail/delete${id}`);
+      const { data } = await api.delete(`/api/thumbnail/delete/${id}`);
       toast.success(data.message);
       setThumbnails(thumbnails.filter((t) => t._id !== id));
     } catch (error: any) {
