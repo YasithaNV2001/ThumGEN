@@ -1,7 +1,9 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_BASE_URL || `http://localhost:3000`,
+  // If we are in Production (Vercel), use the current domain ('/')
+  // If we are in Development (Localhost), use port 3000
+  baseURL: import.meta.env.PROD ? '/' : 'http://localhost:3000',
   withCredentials: true,
 });
 
