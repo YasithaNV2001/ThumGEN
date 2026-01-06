@@ -7,7 +7,7 @@ const UserRouter = express.Router();
 
 // Define user-related routes here
 
-UserRouter.get('/thumbnails',protect, getUserThumbnails);
-UserRouter.get('/thumbnails/:id',protect, getThumbnailbyId);
+UserRouter.get('/thumbnail',protect, getUserThumbnails);
+UserRouter.get('/thumbnail/:id',protect, getThumbnailbyId);
 
 export default UserRouter;
