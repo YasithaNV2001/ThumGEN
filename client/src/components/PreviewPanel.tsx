@@ -18,12 +18,16 @@ const PreviewPanel = ({
 
   const onDownload = () => {
     if (!thumbnail?.image_url) return;
+
+    // Force HTTPS and add attachment flag
+    const secureUrl = thumbnail.image_url.replace(/^http:\/\//i, 'https://');
+    const downloadUrl = secureUrl.replace('/upload', '/upload/fl_attachment');
     
-    const link=document.createElement('a')
-    link.href =thumbnail?.image_url.replace('/upload','/upload/fl_attachment')
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
   };
 
   return (

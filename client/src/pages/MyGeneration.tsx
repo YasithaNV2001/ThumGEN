@@ -35,8 +35,13 @@ const MyGeneration = () => {
   };
 
   const handleDownload = (image_url: string) => {
+    // 1. Force HTTP to HTTPS
+    // 2. Add the attachment flag
+    const secureUrl = image_url.replace(/^http:\/\//i, 'https://');
+    const downloadUrl = secureUrl.replace("/upload", "/upload/fl_attachment");
+
     const link = document.createElement("a");
-    link.href = image_url.replace("/upload", "/upload/fl_attachment");
+    link.href = downloadUrl;
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -48,7 +53,7 @@ const MyGeneration = () => {
         "Are you sure to you want delete this thumbnail?"
       );
       if (!confirm) return;
-      const { data } = await api.delete(`/api/thumbnail/delete/${id}`);
+      const { data } = await api.delete(`/api/thumbnail/delete${id}`);
       toast.success(data.message);
       setThumbnails(thumbnails.filter((t) => t._id !== id));
     } catch (error: any) {

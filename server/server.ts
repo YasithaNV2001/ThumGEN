@@ -6,11 +6,9 @@ import session from 'express-session';
 import MongoStore from 'connect-mongo';
 import AuthRouter from './routes/AuthRoutes.js';
 import ThumbnailRouter from './routes/ThumbnailRoutes.js';
-import User from './models/User.js';
 import UserRouter from './routes/UserRoutes.js';
 
 declare module 'express-session' {
-
     interface SessionData {
        isLoggedIn: boolean;
        userId: string;
@@ -20,18 +18,13 @@ await connectDB()
 
 const app = express();
 
-
-
-
-
-
+// Determine if we are in Production (Vercel) or Development (Localhost)
+const isProduction = process.env.NODE_ENV === 'production';
 
 app.use(cors({
     origin: ['http://localhost:5173', 'http://localhost:3000' , 'https://thum-gen-client.vercel.app'],
     credentials: true,
 }));
-
-
 
 app.use(session({
     secret: process.env.SESSION_SECRET as string,
@@ -39,14 +32,15 @@ app.use(session({
     saveUninitialized: false,
     cookie: { 
         maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-        // FORCE these settings for Vercel to work
+        
+        // DYNAMIC SETTINGS:
+        // If Production (Vercel) -> httpOnly: true, secure: true, sameSite: 'none'
+        // If Localhost           -> httpOnly: true, secure: false, sameSite: 'lax'
         httpOnly: true, 
-        secure: true,       // Must be true for Vercel (HTTPS)
-        sameSite: 'none',   // Must be 'none' for cross-site (Frontend vs Backend)
+        secure: isProduction,       
+        sameSite: isProduction ? 'none' : 'lax',   
         path: '/'
-
-
-    }, // 7 day,
+    }, 
     store: MongoStore.create({
         mongoUrl: process.env.MONGODB_URI as string,
         collectionName: 'sessions',
@@ -59,12 +53,13 @@ app.get('/', (req: Request, res: Response) => {
     res.send('Server is Live!');
 });
 
-app.use('/api/auth',AuthRouter)
-app.use('/api/thumbnail',ThumbnailRouter);
-app.use('/api/user',UserRouter);
+app.use('/api/auth', AuthRouter);
+app.use('/api/thumbnail', ThumbnailRouter);
+app.use('/api/user', UserRouter);
 
 const port = process.env.PORT || 3000;
 
 app.listen(port, () => {
     console.log(`Server is running at http://localhost:${port}`);
+    console.log(`Running in ${isProduction ? 'Production' : 'Development'} mode`);
 });

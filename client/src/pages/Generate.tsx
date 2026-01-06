@@ -46,7 +46,7 @@ const Generate = () => {
 
    }
 
-   const {data} = await api.post(`api/thumbnail/generate`,api_payload)
+   const {data} = await api.post(`api/thumbnails/generate`,api_payload)
 
    if(data.thumbnail){
     navigate('/generate/'+ data.thumbnail._id)
@@ -57,8 +57,8 @@ const Generate = () => {
 
  const fetchThumbnail = async () => {
   try {
-    const { data } = await api.get(`/api/user/thumbnail/${id}`);
-    const thumb = data?.thumbnails; // Match the key from backend
+    const { data } = await api.get(`/api/user/thumbnails/${id}`);
+    const thumb = data?.thumbnail; // Match the key from backend
 
     if (thumb) {
       setThumbnail(thumb as IThumbnail);
