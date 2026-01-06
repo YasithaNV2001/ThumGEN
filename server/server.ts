@@ -18,6 +18,10 @@ await connectDB()
 
 const app = express();
 
+// --- ADD THIS LINE HERE ---
+app.set('trust proxy', 1); 
+// --------------------------
+
 // Determine if we are in Production (Vercel) or Development (Localhost)
 const isProduction = process.env.NODE_ENV === 'production';
 
