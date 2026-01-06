@@ -46,7 +46,7 @@ const Generate = () => {
 
    }
 
-   const {data} = await api.post(`api/thumbnails/generate`,api_payload)
+   const {data} = await api.post(`api/thumbnail/generate`,api_payload)
 
    if(data.thumbnail){
     navigate('/generate/'+ data.thumbnail._id)
