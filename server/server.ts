@@ -1,70 +1,17 @@
-import express, { Request, Response } from 'express';
-import cors from 'cors';
-import 'dotenv/config';
+import { env } from './configs/env.js';
 import connectDB from './configs/db.js';
-import session from 'express-session';
-import MongoStore from 'connect-mongo';
-import AuthRouter from './routes/AuthRoutes.js';
-import ThumbnailRouter from './routes/ThumbnailRoutes.js';
-import UserRouter from './routes/UserRoutes.js';
+import { createApp } from './app.js';
 
-declare module 'express-session' {
-    interface SessionData {
-       isLoggedIn: boolean;
-       userId: string;
-    }
+await connectDB();
+
+const app = createApp();
+
+// On Vercel the exported app runs as a serverless function; locally we listen on a port
+if (!process.env.VERCEL) {
+    app.listen(env.PORT, () => {
+        console.log(`Server is running at http://localhost:${env.PORT}`);
+        console.log(`Running in ${env.NODE_ENV} mode`);
+    });
 }
-await connectDB()
 
-const app = express();
-
-// --- ADD THIS LINE HERE ---
-app.set('trust proxy', 1); 
-// --------------------------
-
-// Determine if we are in Production (Vercel) or Development (Localhost)
-const isProduction = process.env.NODE_ENV === 'production';
-
-app.use(cors({
-    origin: ['http://localhost:5173', 'http://localhost:3000' , 'https://thum-gen-client.vercel.app'],
-    credentials: true,
-}));
-
-app.use(session({
-    secret: process.env.SESSION_SECRET as string,
-    resave: false,
-    saveUninitialized: false,
-    cookie: { 
-        maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-        
-        // DYNAMIC SETTINGS:
-        // If Production (Vercel) -> httpOnly: true, secure: true, sameSite: 'none'
-        // If Localhost           -> httpOnly: true, secure: false, sameSite: 'lax'
-        httpOnly: true, 
-        secure: isProduction,       
-        sameSite: isProduction ? 'none' : 'lax',   
-        path: '/'
-    }, 
-    // REPLACE IT WITH THIS (add "as any"):
-    store: (MongoStore as any).create({
-    mongoUrl: process.env.MONGODB_URI as string,
-    collectionName: 'sessions',
-    })
-}));
-
-app.use(express.json());
-
-app.get('/', (req: Request, res: Response) => {
-    res.send('Server is Live!');
-});
-
-app.use('/api/auth', AuthRouter);
-app.use('/api/thumbnail', ThumbnailRouter);
-app.use('/api/user', UserRouter);
-
-const port = process.env.PORT || 3000;
-
-app.listen(port, () => {
-    console.log(`Server is running at http://localhost:${port}`);
-    console.log(`Running in ${isProduction ? 'Production' : 'Development'} mode`);
-});
+export default app;

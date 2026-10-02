@@ -7,7 +7,7 @@ import { motion } from "motion/react";
 
 export default function PricingSection() {
     return (
-        <div id="pricing" className="px-4 md:px-16 lg:px-24 xl:px-32">
+        <div id="pricing" className="scroll-mt-24 px-4 md:px-16 lg:px-24 xl:px-32">
             <SectionTitle text1="Pricing" 
             text2="Pricing " 
             text3="Choose the plan that fits your creation schedule.Cancel anytime." />

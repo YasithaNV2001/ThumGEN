@@ -2,7 +2,7 @@
     "compilerOptions": {
         "target": "ES2020",
         "module": "nodenext",
-        "moduleResolution":"nodenext",
+        "moduleResolution": "nodenext",
         "outDir": "./dist",
         "rootDir": "./",
         "strict": true,
@@ -14,6 +14,9 @@
         "./**/*.ts"
     ],
     "exclude": [
-        "node_modules"
+        "node_modules",
+        "dist",
+        "tests",
+        "vitest.config.ts"
     ]
 }
