@@ -8,9 +8,14 @@ const EnvSchema = z.object({
     PORT: z.coerce.number().default(3000),
     MONGODB_URI: z.string().min(1, 'MONGODB_URI is required'),
     SESSION_SECRET: z.string().min(16, 'SESSION_SECRET must be at least 16 characters'),
-    GEMINI_API_KEY: z.string().min(1, 'GEMINI_API_KEY is required'),
-    // Flash is faster and much cheaper per image; set gemini-3-pro-image-preview for top quality
-    GEMINI_IMAGE_MODEL: z.string().default('gemini-2.5-flash-image'),
+    // cloudflare = free daily allowance (FLUX.1 schnell); gemini = paid, best quality and text rendering
+    IMAGE_PROVIDER: z.enum(['cloudflare', 'gemini']).default('cloudflare'),
+    CLOUDFLARE_ACCOUNT_ID: z.string().optional(),
+    CLOUDFLARE_API_TOKEN: z.string().optional(),
+    CLOUDFLARE_IMAGE_MODEL: z.string().default('@cf/black-forest-labs/flux-1-schnell'),
+    GEMINI_API_KEY: z.string().optional(),
+    // Use gemini-3-pro-image for top quality at a higher cost
+    GEMINI_IMAGE_MODEL: z.string().default('gemini-3.1-flash-image'),
     CLOUDINARY_URL: z.string().startsWith('cloudinary://', 'CLOUDINARY_URL must look like cloudinary://key:secret@cloud'),
     // Comma-separated list of allowed frontend origins
     CLIENT_URL: z.string().default('http://localhost:5173'),
@@ -20,6 +25,16 @@ const EnvSchema = z.object({
     GUEST_CREDITS: z.coerce.number().int().min(0).default(2),
     // Hard cap on generations across ALL users per UTC day; bounds the worst-case Gemini bill
     DAILY_GENERATION_LIMIT: z.coerce.number().int().min(0).default(50),
+}).superRefine((vars, ctx) => {
+    // Only the selected provider's credentials are required
+    const required = vars.IMAGE_PROVIDER === 'cloudflare'
+        ? (['CLOUDFLARE_ACCOUNT_ID', 'CLOUDFLARE_API_TOKEN'] as const)
+        : (['GEMINI_API_KEY'] as const);
+    for (const key of required) {
+        if (!vars[key]) {
+            ctx.addIssue({ code: 'custom', path: [key], message: `${key} is required when IMAGE_PROVIDER=${vars.IMAGE_PROVIDER}` });
+        }
+    }
 });
 
 const parsed = EnvSchema.safeParse(process.env);

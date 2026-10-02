@@ -1,8 +1,15 @@
 import type { GenerateContentConfig } from '@google/genai';
-import ai from '../configs/ai.js';
+import { getGemini } from '../configs/ai.js';
 import cloudinary from '../configs/cloudinary.js';
 import { env } from '../configs/env.js';
 import type { GenerateInput } from '../validators/schemas.js';
+
+export interface GeneratedImage {
+    data: Buffer;
+    mimeType: string;
+}
+
+type AspectRatio = GenerateInput['aspect_ratio'];
 
 const stylePrompts: Record<GenerateInput['style'], string> = {
     'Bold & Graphic': 'eye-catching thumbnail, bold typography, vibrant colors, expressive facial reaction, dramatic lighting, high contrast, click-worthy composition, professional style',
@@ -40,20 +47,22 @@ export const buildPrompt = (input: GenerateInput): string => {
     return parts.join(' ');
 };
 
-// Calls Gemini and returns the generated image bytes
-export const generateImage = async (prompt: string, aspectRatio: GenerateInput['aspect_ratio']): Promise<Buffer> => {
+// Identify the format from the file's magic bytes (providers return PNG or JPEG)
+const detectMimeType = (data: Buffer) => (data[0] === 0xff && data[1] === 0xd8 ? 'image/jpeg' : 'image/png');
+
+const generateWithGemini = async (prompt: string, aspectRatio: AspectRatio): Promise<GeneratedImage> => {
     const config: GenerateContentConfig = {
         temperature: 1,
         topP: 0.95,
         responseModalities: ['IMAGE'],
         imageConfig: {
             aspectRatio,
-            // imageSize is only supported by the Pro image models
-            ...(env.GEMINI_IMAGE_MODEL.includes('pro') && { imageSize: '1K' }),
+            // imageSize is not supported by the legacy 2.5 image model
+            ...(!env.GEMINI_IMAGE_MODEL.includes('2.5') && { imageSize: '1K' }),
         },
     };
 
-    const response = await ai.models.generateContent({
+    const response = await getGemini().models.generateContent({
         model: env.GEMINI_IMAGE_MODEL,
         contents: [prompt],
         config,
@@ -65,15 +74,48 @@ export const generateImage = async (prompt: string, aspectRatio: GenerateInput['
         throw new Error(`Gemini returned no image${reason ? ` (finish reason: ${reason})` : ''}`);
     }
 
-    return Buffer.from(imagePart.inlineData.data, 'base64');
+    const data = Buffer.from(imagePart.inlineData.data, 'base64');
+    return { data, mimeType: imagePart.inlineData.mimeType || detectMimeType(data) };
 };
 
-// Uploads straight from memory: no temp files, works on read-only serverless filesystems
-export const uploadImage = async (image: Buffer): Promise<{ url: string; publicId: string }> => {
-    const dataUri = `data:image/png;base64,${image.toString('base64')}`;
+// Cloudflare Workers AI REST API. FLUX.1 schnell outputs a square image; uploadImage crops it to the ratio.
+const generateWithCloudflare = async (prompt: string): Promise<GeneratedImage> => {
+    const url = `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/ai/run/${env.CLOUDFLARE_IMAGE_MODEL}`;
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+            Authorization: `Bearer ${env.CLOUDFLARE_API_TOKEN}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ prompt, steps: 6 }),
+        signal: AbortSignal.timeout(90_000),
+    });
+
+    const body: any = await response.json().catch(() => null);
+    const image = body?.result?.image;
+    if (!response.ok || !image) {
+        const detail = body?.errors?.[0]?.message || `HTTP ${response.status}`;
+        throw new Error(`Cloudflare Workers AI returned no image: ${detail}`);
+    }
+
+    const data = Buffer.from(image, 'base64');
+    return { data, mimeType: detectMimeType(data) };
+};
+
+// Generates the image with whichever provider IMAGE_PROVIDER selects
+export const generateImage = async (prompt: string, aspectRatio: AspectRatio): Promise<GeneratedImage> =>
+    env.IMAGE_PROVIDER === 'gemini'
+        ? generateWithGemini(prompt, aspectRatio)
+        : generateWithCloudflare(prompt);
+
+// Uploads straight from memory (no temp files, works on read-only serverless filesystems)
+// and center-crops to the requested aspect ratio so every provider returns the right shape
+export const uploadImage = async (image: GeneratedImage, aspectRatio: AspectRatio): Promise<{ url: string; publicId: string }> => {
+    const dataUri = `data:${image.mimeType};base64,${image.data.toString('base64')}`;
     const result = await cloudinary.uploader.upload(dataUri, {
         resource_type: 'image',
         folder: 'thumgen',
+        transformation: [{ aspect_ratio: aspectRatio, crop: 'fill', gravity: 'center' }],
     });
     return { url: result.secure_url, publicId: result.public_id };
 };

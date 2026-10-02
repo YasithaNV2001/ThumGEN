@@ -42,7 +42,7 @@ export const generateThumbnail = async (req: Request, res: Response) => {
 
     try {
         const image = await generateImage(prompt, input.aspect_ratio);
-        const { url, publicId } = await uploadImage(image);
+        const { url, publicId } = await uploadImage(image, input.aspect_ratio);
 
         thumbnail.image_url = url;
         thumbnail.image_public_id = publicId;

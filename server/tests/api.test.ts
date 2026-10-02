@@ -9,7 +9,7 @@ vi.mock('../services/thumbnailService.js', async (importOriginal) => {
     const actual = await importOriginal<typeof import('../services/thumbnailService.js')>();
     return {
         ...actual,
-        generateImage: vi.fn(async () => Buffer.from('fake-png')),
+        generateImage: vi.fn(async () => ({ data: Buffer.from('fake-png'), mimeType: 'image/png' })),
         uploadImage: vi.fn(async () => ({ url: 'https://res.cloudinary.com/test/image/upload/thumgen/a.png', publicId: 'thumgen/a' })),
         deleteImage: vi.fn(async () => undefined),
     };
