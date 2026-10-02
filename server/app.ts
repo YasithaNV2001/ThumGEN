@@ -1,14 +1,19 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
-import helmet from 'helmet';
+import * as helmetModule from 'helmet';
+import type { HelmetOptions } from 'helmet';
 import mongoose from 'mongoose';
 import session from 'express-session';
-import MongoStore from 'connect-mongo';
+import { MongoStore } from 'connect-mongo';
 import { env } from './configs/env.js';
 import AuthRouter from './routes/AuthRoutes.js';
 import ThumbnailRouter from './routes/ThumbnailRoutes.js';
 import UserRouter from './routes/UserRoutes.js';
 import { errorHandler, notFound } from './middlewares/error.js';
+
+// helmet ships a dual ESM/CJS package whose default export resolves differently depending on how the
+// file is compiled (local tsc vs Vercel's builder), so unwrap it explicitly to work in both
+const helmet = ((helmetModule as any).default ?? helmetModule) as (options?: HelmetOptions) => express.RequestHandler;
 
 declare module 'express-session' {
     interface SessionData {
