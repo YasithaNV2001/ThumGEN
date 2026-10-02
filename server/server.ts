@@ -1,10 +1,12 @@
+// Vercel detects the Express entry file by scanning it for an import from 'express'
+import type { Express } from 'express';
 import { env } from './configs/env.js';
 import connectDB from './configs/db.js';
-import { createApp } from './app.js';
+import { createApp } from './createApp.js';
 
 await connectDB();
 
-const app = createApp();
+const app: Express = createApp();
 
 // On Vercel the exported app runs as a serverless function; locally we listen on a port
 if (!process.env.VERCEL) {

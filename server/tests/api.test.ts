@@ -16,7 +16,7 @@ vi.mock('../services/thumbnailService.js', async (importOriginal) => {
 });
 
 const service = await import('../services/thumbnailService.js');
-const { createApp } = await import('../app.js');
+const { createApp } = await import('../createApp.js');
 const { default: User } = await import('../models/User.js');
 const { default: Thumbnail } = await import('../models/Thumbnail.js');
 
