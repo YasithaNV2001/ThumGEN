@@ -1,14 +1,23 @@
-'use client'
-import { CheckIcon, ChevronRightIcon, VideoIcon } from "lucide-react";
+import { CheckIcon, ChevronRightIcon, Loader2Icon, VideoIcon, ZapIcon } from "lucide-react";
 import TiltedImage from "../components/TiltImage";
 import { motion } from "motion/react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { useState } from "react";
 
 export default function HeroSection() {
 
-
     const navigate = useNavigate();
- 
+    const { isLoggedIn, guestLogin } = useAuth();
+    const [startingGuest, setStartingGuest] = useState(false);
+
+    const tryAsGuest = async () => {
+        setStartingGuest(true);
+        const ok = await guestLogin();
+        setStartingGuest(false);
+        if (ok) navigate('/generate');
+    };
+
 
     const specialFeatures = [
         "No design skills needed",
@@ -19,7 +28,8 @@ export default function HeroSection() {
     return (
         <div className="relative flex flex-col items-center justify-center px-4 md:px-16 lg:px-24 xl:px-32">
             <div className="absolute top-30 -z-10 left-1/4 size-72 bg-pink-600 blur-[300px]"></div>
-            <motion.a href="https://prebuiltui.com?utm_source=pixels" className="group flex items-center gap-2 rounded-full p-1 pr-3 mt-44 text-pink-100 bg-pink-200/15"
+            <motion.a href="/generate" onClick={(e) => { e.preventDefault(); navigate('/generate'); }}
+                className="group flex items-center gap-2 rounded-full p-1 pr-3 mt-44 text-pink-100 bg-pink-200/15"
                 initial={{ y: -20, opacity: 0 }}
                 whileInView={{ y: 0, opacity: 1 }}
                 viewport={{ once: true }}
@@ -42,7 +52,7 @@ export default function HeroSection() {
                 viewport={{ once: true }}
                 transition={{ type: "spring", stiffness: 240, damping: 70, mass: 1 }}
             >
-                AI Thumbnail Generator for your <span className="move-gradient px-3 rounded-xl text-nowrap"> Vedios.</span>
+                AI Thumbnail Generator for your <span className="move-gradient px-3 rounded-xl text-nowrap"> Videos.</span>
             </motion.h1>
             <motion.p className="text-base text-center text-slate-200 max-w-lg mt-6"
                 initial={{ y: 50, opacity: 0 }}
@@ -51,19 +61,27 @@ export default function HeroSection() {
                 transition={{ delay: 0.2, type: "spring", stiffness: 320, damping: 70, mass: 1 }}
             >
                 Stop wasting hours on design. Get high-converting thumbnails in seconds with our advanced AI</motion.p>
-            <motion.div className="flex items-center gap-4 mt-8"
+            <motion.div className="flex flex-wrap justify-center items-center gap-4 mt-8"
                 initial={{ y: 50, opacity: 0 }}
                 whileInView={{ y: 0, opacity: 1 }}
                 viewport={{ once: true }}
                 transition={{ type: "spring", stiffness: 320, damping: 70, mass: 1 }}
             >
-                <button onClick={() => navigate('/generate')} className="bg-pink-600 hover:bg-pink-700 text-white rounded-full px-7 h-11">
-                    Generate now
-                </button>
-                <button className="flex items-center gap-2 border border-pink-900 hover:bg-pink-950/50 transition rounded-full px-6 h-11">
+                {isLoggedIn ? (
+                    <button onClick={() => navigate('/generate')} className="bg-pink-600 hover:bg-pink-700 text-white rounded-full px-7 h-11">
+                        Generate now
+                    </button>
+                ) : (
+                    <button onClick={tryAsGuest} disabled={startingGuest}
+                        className="flex items-center gap-2 bg-pink-600 hover:bg-pink-700 text-white rounded-full px-7 h-11 disabled:opacity-70">
+                        {startingGuest ? <Loader2Icon className="size-4 animate-spin" /> : <ZapIcon className="size-4" />}
+                        Try it now, no sign-up
+                    </button>
+                )}
+                <Link to="/#features" className="flex items-center gap-2 border border-pink-900 hover:bg-pink-950/50 transition rounded-full px-6 h-11">
                     <VideoIcon strokeWidth={1} />
                     <span>See how it works</span>
-                </button>
+                </Link>
             </motion.div>
 
             <div className="flex flex-wrap justify-center items-center gap-4 md:gap-14 mt-12">

@@ -5,3 +5,4 @@ process.env.SESSION_SECRET = 'test-session-secret-0123456789';
 process.env.GEMINI_API_KEY = 'test-key';
 process.env.CLOUDINARY_URL = 'cloudinary://key:secret@test';
 process.env.FREE_CREDITS = '2';
+process.env.DAILY_GENERATION_LIMIT = '3';

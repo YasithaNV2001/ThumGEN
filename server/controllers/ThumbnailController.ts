@@ -3,10 +3,19 @@ import Thumbnail from '../models/Thumbnail.js';
 import User from '../models/User.js';
 import { buildPrompt, deleteImage, generateImage, uploadImage } from '../services/thumbnailService.js';
 import type { GenerateInput } from '../validators/schemas.js';
+import { env } from '../configs/env.js';
 
 export const generateThumbnail = async (req: Request, res: Response) => {
     const { userId } = req.session;
     const input = req.body as GenerateInput;
+
+    // Global daily cap protects the API bill if the public demo gets heavy traffic
+    const startOfDay = new Date();
+    startOfDay.setUTCHours(0, 0, 0, 0);
+    const generatedToday = await Thumbnail.countDocuments({ createdAt: { $gte: startOfDay } });
+    if (generatedToday >= env.DAILY_GENERATION_LIMIT) {
+        return res.status(503).json({ message: 'The demo has reached its daily generation limit. Please try again tomorrow.' });
+    }
 
     // Atomically spend one credit; fails if none are left (no race between check and decrement)
     const user = await User.findOneAndUpdate(

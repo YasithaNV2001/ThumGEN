@@ -7,6 +7,7 @@ const UserSchema = new mongoose.Schema({
     // select: false keeps the hash out of every query unless explicitly requested
     password: { type: String, required: true, select: false },
     credits: { type: Number, default: () => env.FREE_CREDITS, min: 0 },
+    isGuest: { type: Boolean, default: false },
 }, { timestamps: true });
 
 export type IUser = InferSchemaType<typeof UserSchema>;

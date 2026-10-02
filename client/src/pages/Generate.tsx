@@ -18,7 +18,7 @@ const Generate = () => {
 
   const { id } = useParams();
   const navigate = useNavigate()
-  const { isLoggedIn, user, setCredits } = useAuth()
+  const { isLoggedIn, user, setCredits, guestLogin } = useAuth()
 
   const [title, setTitle] = useState('');
   const [additionalDetails, setAdditionalDetails] = useState('');
@@ -43,16 +43,15 @@ const Generate = () => {
   };
 
   const handleGenerate = async () => {
-    if (!isLoggedIn) {
-      toast.error('Please log in to generate thumbnails');
-      return navigate('/login', { state: { from: '/generate' } });
-    }
     if (!title.trim()) return toast.error('Title is required');
     if (outOfCredits) return toast.error('You have used all your free credits');
 
     setLoading(true);
     setThumbnail(null);
     try {
+      // Visitors can generate straight away: start a guest session on first use
+      if (!isLoggedIn && !(await guestLogin())) return;
+
       const { data } = await api.post(`/api/thumbnail/generate`, {
         title: title.trim(),
         prompt: additionalDetails.trim(),
@@ -199,8 +198,17 @@ const Generate = () => {
                     disabled:opacity-60 disabled:cursor-not-allowed transition"
                   >
                     <SparklesIcon className="size-4" />
-                    {loading ? "Generating..." : outOfCredits ? "No credits left" : "Generate Thumbnail (1 credit)"}
+                    {loading ? "Generating..."
+                      : outOfCredits ? "No credits left"
+                      : isLoggedIn ? "Generate Thumbnail (1 credit)"
+                      : "Generate Free (no sign-up)"}
                   </button>
+                )}
+
+                {outOfCredits && user?.isGuest && (
+                  <p className="text-xs text-center text-zinc-400">
+                    Enjoyed it? <Link to="/login" className="text-pink-400 hover:underline">Create a free account</Link> for more credits.
+                  </p>
                 )}
               </div>
             </div>

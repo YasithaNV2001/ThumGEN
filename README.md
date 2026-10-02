@@ -12,7 +12,8 @@ A full-stack **MERN + TypeScript** app that generates click-worthy YouTube thumb
 
 - **AI image generation**: prompts are built from the chosen style, color palette, aspect ratio (16:9, 1:1, 9:16), optional title overlay and the user's own details, then sent to Gemini
 - **Session authentication**: bcrypt password hashing, httpOnly cookies, sessions stored in MongoDB, session regeneration on login
-- **Credit system**: every account gets free credits; credits are spent atomically and refunded automatically if generation fails
+- **Try without signing up**: one click starts a guest session with free credits, so visitors can generate immediately
+- **Credit system**: every account gets free credits; credits are spent atomically and refunded automatically if generation fails, and a global daily cap bounds total API spend
 - **History**: paginated gallery of past thumbnails with download, delete and YouTube preview
 - **YouTube preview**: see the thumbnail in a realistic YouTube home feed before publishing
 - **Protected routes** on the client with redirect back after login
@@ -25,7 +26,7 @@ A full-stack **MERN + TypeScript** app that generates click-worthy YouTube thumb
 | Security | `helmet` headers, CORS allow-list, rate limiting (login/register per IP, generation per user), ownership checks on every thumbnail query, no internal errors leaked, XSS-safe preview page |
 | Reliability | Env vars validated at startup, central error handler, no stuck "generating" records, credit refunds on AI failure |
 | Cloud-ready | Images uploaded to Cloudinary straight from memory (works on read-only serverless file systems); Mongo connection reused across invocations |
-| Testing | 17 integration tests (Vitest + Supertest + in-memory MongoDB) covering auth, validation, credits, refunds and access control; Gemini and Cloudinary are mocked |
+| Testing | 19 integration tests (Vitest + Supertest + in-memory MongoDB) covering auth, guest sessions, validation, credits, refunds, the daily cap and access control; Gemini and Cloudinary are mocked |
 | CI | GitHub Actions runs server typecheck + tests and client lint + build on every push |
 
 ## Tech stack
@@ -68,6 +69,7 @@ ThumGEN/
 |---|---|---|---|
 | POST | `/api/auth/register` | – | Create account and start a session |
 | POST | `/api/auth/login` | – | Log in |
+| POST | `/api/auth/guest` | – | Start a one-click guest session |
 | GET | `/api/auth/verify` | ✓ | Current user (incl. credits) |
 | POST | `/api/auth/logout` | ✓ | End session |
 | POST | `/api/thumbnail/generate` | ✓ | Generate a thumbnail (costs 1 credit) |

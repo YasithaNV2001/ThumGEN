@@ -54,6 +54,7 @@ export interface IUser {
     email: string;
     _id?: string;
     credits: number;
+    isGuest?: boolean;
     createdAt?: Date;
     updatedAt?: Date;
 }

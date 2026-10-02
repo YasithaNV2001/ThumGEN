@@ -9,7 +9,7 @@ const Login = () => {
 
     const [state, setState] = useState<"login" | "register">("login")
     const [submitting, setSubmitting] = useState(false)
-    const { user, login, signUp } = useAuth()
+    const { user, login, signUp, guestLogin } = useAuth()
     const navigate = useNavigate()
     const location = useLocation()
     // Return to the page that required login, if any
@@ -37,11 +37,24 @@ const Login = () => {
         setSubmitting(false)
     }
 
+    const handleGuest = async () => {
+        setSubmitting(true)
+        await guestLogin()
+        setSubmitting(false)
+    }
+
+    // Guests may visit this page to upgrade to a real account, so only redirect full users
     useEffect(() => {
-        if (user) {
+        if (user && !user.isGuest) {
             navigate(redirectTo, { replace: true })
         }
     }, [user])
+
+    // A guest who was just created here should continue to the app
+    const [startedAsGuest, setStartedAsGuest] = useState(false)
+    useEffect(() => {
+        if (user?.isGuest && startedAsGuest) navigate(redirectTo, { replace: true })
+    }, [user, startedAsGuest])
 
     const inputWrapper = "flex items-center w-full mt-4 bg-white/5 ring-2 ring-white/10 focus-within:ring-pink-500/60 h-12 rounded-full overflow-hidden pl-6 gap-2 transition-all"
     const inputClass = "w-full bg-transparent text-white placeholder-white/60 border-none outline-none"
@@ -98,6 +111,19 @@ const Login = () => {
                         {submitting && <Loader2Icon className="size-4 animate-spin" />}
                         {state === "login" ? "Login" : "Sign up"}
                     </button>
+
+                    {!user?.isGuest && (
+                        <>
+                            <div className="flex items-center gap-3 mt-5 text-xs text-zinc-500">
+                                <span className="h-px flex-1 bg-white/10" /> or <span className="h-px flex-1 bg-white/10" />
+                            </div>
+                            <button type="button" disabled={submitting}
+                                onClick={() => { setStartedAsGuest(true); handleGuest() }}
+                                className="mt-5 w-full h-11 rounded-full border border-white/15 bg-white/5 hover:bg-white/10 transition disabled:opacity-60">
+                                Continue as guest
+                            </button>
+                        </>
+                    )}
 
                     <p className="text-gray-400 text-sm mt-3 mb-11">
                         {state === "login" ? "Don't have an account?" : "Already have an account?"}

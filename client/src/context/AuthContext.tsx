@@ -11,6 +11,7 @@ interface AuthContextProps {
     setCredits: (credits: number) => void;
     login: (user: { email: string; password: string }) => Promise<boolean>;
     signUp: (user: { name: string; email: string; password: string }) => Promise<boolean>;
+    guestLogin: () => Promise<boolean>;
     logout: () => Promise<void>;
 }
 
@@ -21,6 +22,7 @@ const AuthContext = createContext<AuthContextProps>({
     setCredits: () => {},
     login: async () => false,
     signUp: async () => false,
+    guestLogin: async () => false,
     logout: async () => {},
 });
 
@@ -43,6 +45,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const login = async ({ email, password }: { email: string; password: string }) => {
         try {
             const { data } = await api.post(`/api/auth/login`, { email, password });
+            setUser(data.user as IUser);
+            toast.success(data.message);
+            return true;
+        } catch (error) {
+            toast.error(getErrorMessage(error));
+            return false;
+        }
+    };
+
+    // One click, no form: creates a temporary guest account with a few credits
+    const guestLogin = async () => {
+        try {
+            const { data } = await api.post(`/api/auth/guest`);
             setUser(data.user as IUser);
             toast.success(data.message);
             return true;
@@ -88,6 +103,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setCredits,
         signUp,
         login,
+        guestLogin,
         logout,
     };
 

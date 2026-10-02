@@ -1,12 +1,15 @@
 import { Request, Response } from 'express';
+import crypto from 'node:crypto';
 import bcrypt from 'bcrypt';
 import User from '../models/User.js';
+import { env } from '../configs/env.js';
 
 const toPublicUser = (user: any) => ({
     _id: user._id,
     name: user.name,
     email: user.email,
     credits: user.credits,
+    isGuest: user.isGuest ?? false,
 });
 
 // Regenerate the session on login to prevent session fixation
@@ -36,6 +39,27 @@ export const registerUser = async (req: Request, res: Response) => {
     return res.status(201).json({
         message: 'Account created successfully',
         user: toPublicUser(newUser),
+    });
+};
+
+// One-click demo account: no form, a few credits, random unusable credentials
+export const guestLogin = async (req: Request, res: Response) => {
+    const id = crypto.randomBytes(6).toString('hex');
+    const randomPassword = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10);
+
+    const guest = await User.create({
+        name: 'Guest',
+        email: `guest-${id}@guest.thumgen.invalid`,
+        password: randomPassword,
+        credits: env.GUEST_CREDITS,
+        isGuest: true,
+    });
+
+    await startSession(req, guest._id.toString());
+
+    return res.status(201).json({
+        message: `Welcome! You have ${env.GUEST_CREDITS} free generations to try.`,
+        user: toPublicUser(guest),
     });
 };
 

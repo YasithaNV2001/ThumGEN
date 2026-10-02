@@ -102,6 +102,16 @@ describe('auth', () => {
         expect(res.body.user.email).toBe(validUser.email);
     });
 
+    it('creates a one-click guest session with guest credits', async () => {
+        const agent = request.agent(app);
+        const res = await agent.post('/api/auth/guest').expect(201);
+        expect(res.body.user).toMatchObject({ name: 'Guest', isGuest: true, credits: 2 });
+
+        const verify = await agent.get('/api/auth/verify').expect(200);
+        expect(verify.body.user.isGuest).toBe(true);
+        await agent.post('/api/thumbnail/generate').send(validThumbnail).expect(201);
+    });
+
     it('logs out and ends the session', async () => {
         const agent = await signUp();
         await agent.post('/api/auth/logout').expect(200);
@@ -170,6 +180,21 @@ describe('thumbnails', () => {
         await owner.delete(`/api/thumbnail/delete/${id}`).expect(200);
         expect(await Thumbnail.countDocuments()).toBe(0);
         expect(service.deleteImage).toHaveBeenCalledWith('thumgen/a');
+    });
+
+    it('enforces the global daily generation limit across all users', async () => {
+        // DAILY_GENERATION_LIMIT is 3 in tests/setup.ts
+        const first = await signUp();
+        const second = await signUp({ ...validUser, email: 'second@example.com' });
+        await first.post('/api/thumbnail/generate').send(validThumbnail).expect(201);
+        await first.post('/api/thumbnail/generate').send(validThumbnail).expect(201);
+        await second.post('/api/thumbnail/generate').send(validThumbnail).expect(201);
+
+        const res = await second.post('/api/thumbnail/generate').send(validThumbnail).expect(503);
+        expect(res.body.message).toMatch(/daily generation limit/);
+        // The blocked request must not cost a credit
+        const me = await second.get('/api/auth/verify').expect(200);
+        expect(me.body.user.credits).toBe(1);
     });
 
     it('returns 400 for malformed ids', async () => {
