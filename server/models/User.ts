@@ -1,26 +1,16 @@
-import mongoose from 'mongoose';
+import mongoose, { type InferSchemaType } from 'mongoose';
+import { env } from '../configs/env.js';
 
+const UserSchema = new mongoose.Schema({
+    name: { type: String, required: true, trim: true, maxlength: 60 },
+    email: { type: String, required: true, unique: true, trim: true, lowercase: true },
+    // select: false keeps the hash out of every query unless explicitly requested
+    password: { type: String, required: true, select: false },
+    credits: { type: Number, default: () => env.FREE_CREDITS, min: 0 },
+}, { timestamps: true });
 
-export interface IUser extends Document {
+export type IUser = InferSchemaType<typeof UserSchema>;
 
-
-    name: string;
-    email: string;
-    password?: string;
-    createdAt?: Date;
-    updatedAt?: Date;
-
-}
-
-const UserSchema = new mongoose.Schema<IUser>({
-
-    name: { type: String, required: true, trim: true },
-    email: { type: String, required: true, unique: true,trim: true ,lowercase: true},
-    password: { type: String, required: true },
-    
-}, { timestamps: true });   
-
-const User = mongoose.models.User || mongoose.model<IUser>('User',
-     UserSchema)   ;
+const User = mongoose.models.User || mongoose.model('User', UserSchema);
 
 export default User;

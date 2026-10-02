@@ -1,5 +1,6 @@
 import { DownloadIcon, ImageIcon, Loader2Icon } from "lucide-react";
 import type { AspectRatio, IThumbnail } from "../assets/assets";
+import { downloadImage } from "../utils/download";
 
 const PreviewPanel = ({
   thumbnail,
@@ -18,16 +19,7 @@ const PreviewPanel = ({
 
   const onDownload = () => {
     if (!thumbnail?.image_url) return;
-
-    // Force HTTPS and add attachment flag
-    const secureUrl = thumbnail.image_url.replace(/^http:\/\//i, 'https://');
-    const downloadUrl = secureUrl.replace('/upload', '/upload/fl_attachment');
-    
-    const link = document.createElement('a');
-    link.href = downloadUrl;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
+    downloadImage(thumbnail.image_url, thumbnail.title);
   };
 
   return (

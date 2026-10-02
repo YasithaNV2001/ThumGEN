@@ -2,93 +2,86 @@ import { useEffect, useState } from "react";
 import { type IThumbnail } from "../assets/assets";
 import SoftBackDrop from "../components/SoftBackDrop";
 import { useNavigate, Link } from "react-router-dom";
-import { ArrowUpRightIcon, DownloadIcon, TrashIcon } from "lucide-react";
-import { useAuth } from "../context/AuthContext";
-import api from "../configs/api";
+import { ArrowUpRightIcon, DownloadIcon, Loader2Icon, SparklesIcon, TrashIcon } from "lucide-react";
+import api, { getErrorMessage } from "../configs/api";
+import { downloadImage } from "../utils/download";
 import toast from "react-hot-toast";
 
-const MyGeneration = () => {
-  const { isLoggedIn } = useAuth();
+const PAGE_SIZE = 12;
 
+const aspectRatioClassesMap: Record<string, string> = {
+  "16:9": "aspect-video",
+  "1:1": "aspect-square",
+  "9:16": "aspect-[9/16]",
+};
+
+const MyGeneration = () => {
   const navigate = useNavigate();
 
-  const aspectRatioClassesMap: Record<string, string> = {
-    "16:9": "aspect-video", // Standard Tailwind
-    "1:1": "aspect-square", // Standard Tailwind
-    "9:16": "aspect-[9/16]", // Arbitrary value
-  };
-
   const [thumbnails, setThumbnails] = useState<IThumbnail[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
 
-  const fetchThumbnails = async () => {
+  const fetchThumbnails = async (pageToLoad: number) => {
     try {
-      setLoading(true);
-      const { data } = await api.get(`/api/user/thumbnails`);
-      setThumbnails(data.thumbnails || []);
-    } catch (error: any) {
-      console.error(error);
-      toast.error(error?.response?.data?.message || error.message);
+      pageToLoad === 1 ? setLoading(true) : setLoadingMore(true);
+      const { data } = await api.get(`/api/user/thumbnails`, { params: { page: pageToLoad, limit: PAGE_SIZE } });
+      setThumbnails((prev) => (pageToLoad === 1 ? data.thumbnails : [...prev, ...data.thumbnails]));
+      setPage(data.page);
+      setTotalPages(data.totalPages);
+      setTotal(data.total);
+    } catch (error) {
+      toast.error(getErrorMessage(error));
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
-  const handleDownload = (image_url: string) => {
-    // 1. Force HTTP to HTTPS
-    // 2. Add the attachment flag
-    const secureUrl = image_url.replace(/^http:\/\//i, 'https://');
-    const downloadUrl = secureUrl.replace("/upload", "/upload/fl_attachment");
-
-    const link = document.createElement("a");
-    link.href = downloadUrl;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-  };
-
   const handleDelete = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this thumbnail?")) return;
     try {
-      const confirm = window.confirm(
-        "Are you sure to you want delete this thumbnail?"
-      );
-      if (!confirm) return;
       const { data } = await api.delete(`/api/thumbnail/delete/${id}`);
       toast.success(data.message);
-      setThumbnails(thumbnails.filter((t) => t._id !== id));
-    } catch (error: any) {
-      console.error(error);
-      toast.error(error?.response?.data?.message || error.message);
+      setThumbnails((prev) => prev.filter((t) => t._id !== id));
+      setTotal((prev) => prev - 1);
+    } catch (error) {
+      toast.error(getErrorMessage(error));
     }
   };
 
   useEffect(() => {
-    if (isLoggedIn) {
-      fetchThumbnails();
-    }
-  }, [isLoggedIn]);
+    fetchThumbnails(1);
+  }, []);
+
+  const previewLink = (thumb: IThumbnail) =>
+    `/preview?${new URLSearchParams({ thumbnail_url: thumb.image_url || "", title: thumb.title })}`;
 
   return (
     <>
       <SoftBackDrop />
       <div className="mt-32 min-h-screen px-6 md:px-16 lg:px-24 xl:px-32">
         {/*HEADER*/}
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-zinc-200">My Generation</h1>
-          <p className="text-sm text-zinc-400 mt-1">
-            View and manage all your AI-generated thumbnails
-          </p>
+        <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-zinc-200">My Generations</h1>
+            <p className="text-sm text-zinc-400 mt-1">
+              View and manage all your AI-generated thumbnails{total > 0 && ` (${total})`}
+            </p>
+          </div>
+          <Link to="/generate" className="flex items-center gap-2 px-5 py-2.5 bg-pink-600 hover:bg-pink-700 rounded-full text-sm transition">
+            <SparklesIcon className="size-4" /> New Thumbnail
+          </Link>
         </div>
 
         {/*LOADING*/}
         {loading && (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div
-                key={i}
-                className="rounded-2xl bg-white/6 border
-           border-white/10 animate-pulse h-[260px]"
-              />
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="rounded-2xl bg-white/6 border border-white/10 animate-pulse h-65" />
             ))}
           </div>
         )}
@@ -96,115 +89,92 @@ const MyGeneration = () => {
         {/*EMPTY STATE*/}
         {!loading && thumbnails.length === 0 && (
           <div className="text-center py-24">
-            <h3 className="text-lg font-semibold text-zinc-200 ">
-              No thumbnails generated yet
-            </h3>
-            <p className="text-sm text-zinc-400 mt-2">
-              Start creating your first AI-generated thumbnail.
-            </p>
+            <h3 className="text-lg font-semibold text-zinc-200">No thumbnails generated yet</h3>
+            <p className="text-sm text-zinc-400 mt-2">Start creating your first AI-generated thumbnail.</p>
+            <Link to="/generate" className="inline-block mt-6 px-6 py-2.5 bg-pink-600 hover:bg-pink-700 rounded-full transition">
+              Generate one now
+            </Link>
           </div>
         )}
 
         {/*GRID */}
         {!loading && thumbnails.length > 0 && (
-          <div
-            className="columns-1 sm:columns-2 md:columns-3 
-          lg:columns-4 gap-8 "
-          >
-            {thumbnails.map((thumb: IThumbnail) => {
-              const aspectClass =
-                aspectRatioClassesMap[thumb.aspect_ratio || "16:9"];
+          <div className="columns-1 sm:columns-2 md:columns-3 lg:columns-4 gap-8">
+            {thumbnails.map((thumb) => {
+              const aspectClass = aspectRatioClassesMap[thumb.aspect_ratio || "16:9"];
               return (
                 <div
                   key={thumb._id}
                   onClick={() => navigate(`/generate/${thumb._id}`)}
-                  className="mb-8 group relative cursor-pointer
-               rounded-2xl bg-white/6 border-white/10 
-               transition shadow-xl break-inside-avoid"
+                  className="mb-8 group relative cursor-pointer rounded-2xl bg-white/6 border border-white/10
+                  transition shadow-xl break-inside-avoid"
                 >
                   {/*IMAGE CONTAINER*/}
-                  <div
-                    className={`relative overflow-hidden rounded-t-2xl ${aspectClass} bg-black`}
-                  >
+                  <div className={`relative overflow-hidden rounded-t-2xl ${aspectClass} bg-black`}>
                     {thumb.image_url ? (
                       <img
-                        src={thumb.image_url?.replace(/^http:\/\//i, 'https://')}
+                        src={thumb.image_url.replace(/^http:\/\//i, 'https://')}
                         alt={thumb.title}
+                        loading="lazy"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                     ) : (
-                      <div
-                        className="w-full h-full flex items-center 
-                        justify-center text-sm text-zinc-400"
-                      >
+                      <div className="w-full h-full flex items-center justify-center text-sm text-zinc-400">
                         {thumb.isGenerating ? "Generating..." : "No Image"}
                       </div>
                     )}
-
-                    {thumb.isGenerating && (
-                      <div
-                        className="absolute inset-0 bg-black/50 flex items-center justify-center
-                    text-sm font-medium text-white"
-                      >
-                        Generating...
-                      </div>
-                    )}
                   </div>
+
                   {/*CONTENT*/}
                   <div className="p-4 space-y-2">
-                    <h3 className="text-sm font-semibold text-zinc-100 line-clamp-2">
-                      {thumb.title}
-                    </h3>
+                    <h3 className="text-sm font-semibold text-zinc-100 line-clamp-2">{thumb.title}</h3>
 
-                    <div className="flex flex-wrap gap-2 text-smtext-zinc-400">
-                      <span className="px-2 py-0.5 rounded bg-white/8">
-                        {thumb.style}
-                      </span>
-                      <span className="px-2 py-0.5 rounded bg-white/8">
-                        {thumb.color_scheme}
-                      </span>
-                      <span className="px-2 py-0.5 rounded bg-white/8">
-                        {thumb.aspect_ratio}
-                      </span>
+                    <div className="flex flex-wrap gap-2 text-xs text-zinc-400">
+                      <span className="px-2 py-0.5 rounded bg-white/8">{thumb.style}</span>
+                      {thumb.color_scheme && <span className="px-2 py-0.5 rounded bg-white/8 capitalize">{thumb.color_scheme}</span>}
+                      <span className="px-2 py-0.5 rounded bg-white/8">{thumb.aspect_ratio}</span>
                     </div>
 
-                    <p className="text-xs text-zinc-500">
-                      {new Date(thumb.createdAt!).toDateString()}
-                    </p>
+                    {thumb.createdAt && (
+                      <p className="text-xs text-zinc-500">{new Date(thumb.createdAt).toDateString()}</p>
+                    )}
                   </div>
 
-                  <div
-                    onClick={(e) => e.stopPropagation()}
-                    className="absolute bottom-2 right-2 max-sm:flex sm:hidden
-                  group-hover:flex gap-1.5"
-                  >
-                    <TrashIcon
-                      onClick={(e) => {
-                        e.stopPropagation(); // Stop navigation
-                        handleDelete(thumb._id);
-                      }}
-                      className="size-6 bg-black/50 p-1 rounded hover:bg-pink-600 transition-all"
-                    />
-
-                    <DownloadIcon
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDownload(thumb.image_url!);
-                      }}
-                      className="size-6 bg-black/50 p-1 rounded hover:bg-pink-600 transition-all"
-                    />
-
-                    <Link
-                    onClick={(e)=>{e.stopPropagation()}}
-                      target="_blank"
-                      to={`/preview?thumbnail_url=${thumb.image_url}&title=${thumb.title}`}
+                  {/*ACTIONS*/}
+                  {thumb.image_url && (
+                    <div
+                      onClick={(e) => e.stopPropagation()}
+                      className="absolute bottom-2 right-2 max-sm:flex sm:hidden group-hover:flex gap-1.5"
                     >
-                      <ArrowUpRightIcon className="size-6 bg-black/50 p-1 rounded hover:bg-pink-600 transition-all" />
-                    </Link>
-                  </div>
+                      <button type="button" title="Delete" aria-label="Delete thumbnail" onClick={() => handleDelete(thumb._id)}>
+                        <TrashIcon className="size-6 bg-black/50 p-1 rounded hover:bg-pink-600 transition-all" />
+                      </button>
+                      <button type="button" title="Download" aria-label="Download thumbnail"
+                        onClick={() => downloadImage(thumb.image_url!, thumb.title)}>
+                        <DownloadIcon className="size-6 bg-black/50 p-1 rounded hover:bg-pink-600 transition-all" />
+                      </button>
+                      <Link title="Preview on YouTube" aria-label="Preview on YouTube" target="_blank" to={previewLink(thumb)}>
+                        <ArrowUpRightIcon className="size-6 bg-black/50 p-1 rounded hover:bg-pink-600 transition-all" />
+                      </Link>
+                    </div>
+                  )}
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/*LOAD MORE*/}
+        {!loading && page < totalPages && (
+          <div className="flex justify-center pb-16">
+            <button
+              onClick={() => fetchThumbnails(page + 1)}
+              disabled={loadingMore}
+              className="flex items-center gap-2 px-6 py-2.5 rounded-full border border-white/15 bg-white/8 hover:bg-white/12 transition disabled:opacity-60"
+            >
+              {loadingMore && <Loader2Icon className="size-4 animate-spin" />}
+              Load more
+            </button>
           </div>
         )}
       </div>

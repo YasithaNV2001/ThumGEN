@@ -1,37 +1,33 @@
-
 import { Request, Response } from 'express';
 import Thumbnail from '../models/Thumbnail.js';
 
-//Controlers to get all user thumbnails
+const MAX_PAGE_SIZE = 50;
 
+// GET /api/user/thumbnails?page=1&limit=20
 export const getUserThumbnails = async (req: Request, res: Response) => {
+    const { userId } = req.session;
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(MAX_PAGE_SIZE, Math.max(1, Number(req.query.limit) || 20));
 
-    try {
-        const { userId } = req.session;
-        const thumbnails = await Thumbnail.find({ userId }).sort({ createdAt: -1 });
-        res.json({ thumbnails });
+    const [thumbnails, total] = await Promise.all([
+        Thumbnail.find({ userId })
+            .select('-prompt_used')
+            .sort({ createdAt: -1 })
+            .skip((page - 1) * limit)
+            .limit(limit),
+        Thumbnail.countDocuments({ userId }),
+    ]);
 
+    return res.json({ thumbnails, page, limit, total, totalPages: Math.ceil(total / limit) });
+};
 
+export const getThumbnailById = async (req: Request, res: Response) => {
+    const { userId } = req.session;
+    const { id } = req.params;
 
-    }catch (error:any) {
-        console.log(error);
-        res.status(500).json({ message: error.message});
+    const thumbnail = await Thumbnail.findOne({ userId, _id: id });
+    if (!thumbnail) {
+        return res.status(404).json({ message: 'Thumbnail not found' });
     }
-}
-
-
-//controler to get single thumbanial of a user
-
-export const getThumbnailbyId = async (req: Request, res: Response) => {
-
-    try {
-        const { userId } = req.session;
-        const{id} = req.params;
-        const thumbnail = await Thumbnail.findOne({ userId, _id:id });
-        res.json({ thumbnail });    
-
-}   catch (error:any) { 
-        console.log(error);
-        res.status(500).json({ message: error.message});
-}
-}
+    return res.json({ thumbnail });
+};

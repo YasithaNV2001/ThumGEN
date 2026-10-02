@@ -1,133 +1,97 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import type { IUser } from "../assets/assets";
-import api from "../configs/api";
+import api, { getErrorMessage } from "../configs/api";
 import toast from "react-hot-toast";
 
-interface AuthContextProps{
-    isLoggedIn:boolean;
-    setIsLoggedIn: (isLoggedIn:boolean) => void;
-    user:IUser | null;
-    setUser: (user:IUser | null) => void;
-    login:(user:{email:string; password:string}) => Promise<void>;
-    signUp:(user:{name:string; email:string; password:string}) => Promise<void>;
-    logout:() => Promise<void>;
-
+interface AuthContextProps {
+    isLoggedIn: boolean;
+    // True until the initial session check finishes, so pages don't flash a logged-out state
+    isAuthLoading: boolean;
+    user: IUser | null;
+    setCredits: (credits: number) => void;
+    login: (user: { email: string; password: string }) => Promise<boolean>;
+    signUp: (user: { name: string; email: string; password: string }) => Promise<boolean>;
+    logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextProps>({
-    isLoggedIn:false,
-    setIsLoggedIn: () => {},
-    user:null,
-    setUser: () => {},
-    login: async () => {},
-    signUp: async () => {},
-    logout: async () => {}
+    isLoggedIn: false,
+    isAuthLoading: true,
+    user: null,
+    setCredits: () => {},
+    login: async () => false,
+    signUp: async () => false,
+    logout: async () => {},
 });
 
-export const AuthProvider = ({ children }:{ children: React.ReactNode }) => {
-
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [user, setUser] = useState<IUser | null>(null);
-    const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false); 
+    const [isAuthLoading, setIsAuthLoading] = useState(true);
 
-    const signUp =async({name,email,password} : {name:string; email:string; password:string})=>{
-
-        try{
-
-            const {data} = await api.post(`/api/auth/register`, {name, email, password});
-            if(data.user){
-                setUser(data.user as IUser);
-                setIsLoggedIn(true);
-            }
-
+    const signUp = async ({ name, email, password }: { name: string; email: string; password: string }) => {
+        try {
+            const { data } = await api.post(`/api/auth/register`, { name, email, password });
+            setUser(data.user as IUser);
             toast.success(data.message);
-
-        }catch(error){
-
-            console.log(error);
+            return true;
+        } catch (error) {
+            toast.error(getErrorMessage(error));
+            return false;
         }
+    };
 
-    }
-
-     const login =async({email,password} : { email:string; password:string})=>{
-
-
-         try{
-
-            const {data} = await api.post(`/api/auth/login`, { email, password});
-            if(data.user){
-                setUser(data.user as IUser);
-                setIsLoggedIn(true);
-            }
-
+    const login = async ({ email, password }: { email: string; password: string }) => {
+        try {
+            const { data } = await api.post(`/api/auth/login`, { email, password });
+            setUser(data.user as IUser);
             toast.success(data.message);
-
-        }catch(error){
-
-            console.log(error);
+            return true;
+        } catch (error) {
+            toast.error(getErrorMessage(error));
+            return false;
         }
-        
-    }
+    };
 
-     const logout=async()=>{
-
-        try{
-
-            const {data} = await api.post(`/api/auth/logout`);
+    const logout = async () => {
+        try {
+            const { data } = await api.post(`/api/auth/logout`);
+            toast.success(data.message);
+        } catch (error) {
+            toast.error(getErrorMessage(error));
+        } finally {
             setUser(null);
-            setIsLoggedIn(false);
-
-            toast.success(data.message);
-
-        }catch(error){
-
-            console.log(error);
         }
-        
-        
-    }
+    };
 
-     const fetchUser =async()=>{
-         try{
-
-            const {data} = await api.get(`api/auth/verify`);
-            if(data.user){
-                setUser(data.user as IUser);
-                setIsLoggedIn(true);
-            }
-           
-
-        }catch(error:any){
-
-            console.log(error);
-        }
-
-        
-    }
+    const setCredits = useCallback((credits: number) => {
+        setUser((prev) => (prev ? { ...prev, credits } : prev));
+    }, []);
 
     useEffect(() => {
-
         (async () => {
-            await fetchUser();
+            try {
+                const { data } = await api.get(`/api/auth/verify`);
+                setUser(data.user as IUser);
+            } catch {
+                // 401 just means there's no active session
+                setUser(null);
+            } finally {
+                setIsAuthLoading(false);
+            }
         })();
-       
     }, []);
 
     const value = {
-        isLoggedIn,
-        setIsLoggedIn,
+        isLoggedIn: !!user,
+        isAuthLoading,
         user,
-        setUser,
+        setCredits,
         signUp,
         login,
-        logout
+        logout,
+    };
 
-        
-    }
+    return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
-}       
 export const useAuth = () => useContext(AuthContext);

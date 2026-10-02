@@ -52,7 +52,8 @@ export interface IThumbnail {
 export interface IUser {
     name: string;
     email: string;
-    password?: string;
+    _id?: string;
+    credits: number;
     createdAt?: Date;
     updatedAt?: Date;
 }
