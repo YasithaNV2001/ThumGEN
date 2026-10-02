@@ -22,7 +22,7 @@ declare module 'express-session' {
     }
 }
 
-// Builds the Express app. Expects mongoose to be connected already (the session store reuses its client).
+// Builds the Express app (named createApp.ts, not app.ts, so Vercel picks server.ts as the entry). Expects mongoose to be connected already (the session store reuses its client).
 export const createApp = () => {
     const app = express();
 

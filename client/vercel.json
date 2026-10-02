@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://thum-gen-server.vercel.app/api/:path*"
+      "destination": "https://thum-gen.vercel.app/api/:path*"
     },
     {
       "source": "/(.*)",
