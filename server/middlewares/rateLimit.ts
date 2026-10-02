@@ -1,4 +1,6 @@
-import rateLimit from 'express-rate-limit';
+// Named import: the default export resolves differently under Vercel's builder than under local tsc
+import { rateLimit } from 'express-rate-limit';
+import type { Request } from 'express';
 import { env } from '../configs/env.js';
 
 const skip = () => env.NODE_ENV === 'test';
@@ -30,6 +32,6 @@ export const generateLimiter = rateLimit({
     standardHeaders: 'draft-8',
     legacyHeaders: false,
     skip,
-    keyGenerator: (req) => req.session.userId!,
+    keyGenerator: (req: Request) => req.session.userId!,
     message: { message: 'You are generating too fast. Please wait a minute.' },
 });
