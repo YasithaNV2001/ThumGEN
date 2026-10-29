@@ -4,7 +4,7 @@
 
 A full-stack **MERN + TypeScript** app that generates click-worthy YouTube thumbnails with AI (Cloudflare Workers AI or Google Gemini). Users sign up, pick a style, color scheme and aspect ratio, generate a thumbnail, preview it inside a YouTube-style feed, and manage their history.
 
-**Live demo:** _coming soon_
+**Live demo:** [thum-gen-client.vercel.app](https://thum-gen-client.vercel.app) · API health: [thum-gen.vercel.app/api/health](https://thum-gen.vercel.app/api/health)
 
 <!-- Add a screenshot: docs/screenshot.png -->
 
